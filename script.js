@@ -1,3 +1,14 @@
+$(".slick-end").slick({
+  lazyLoad: "ondemand",
+  arrows: false,
+  dots: false,
+  slidesToShow: 1,
+  slidesToScroll: 1,
+  autoplay: true,
+  autoplaySpeed: 3000,
+});
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const track = document.querySelector(".slick-track");
   const slides = Array.from(document.querySelectorAll(".slick-slide"));
@@ -6,8 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnNext = document.querySelector(".control-button.right");
   const btnPlay = document.querySelector(".control-button.center");
 
-  let current = slides.findIndex(slide =>
-    slide.classList.contains("slick-current")
+  let current = slides.findIndex((slide) =>
+    slide.classList.contains("slick-current"),
   );
   if (current < 0) current = 0;
 
@@ -82,4 +93,3 @@ document.addEventListener("DOMContentLoaded", () => {
     goTo(current);
   });
 });
-
