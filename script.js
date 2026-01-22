@@ -33,22 +33,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const focalItems = Array.from(root.querySelectorAll(".focal-item"));
   const indicator = root.querySelector(".focal-track-indicator");
 
-  const btnPrev = root.querySelector(".control-button.left");
-  const btnNext = root.querySelector(".control-button.right");
-  const btnPlay = root.querySelector(".control-button.center");
-
   /* ======================================================
-     MAPAS FIXOS (DOT ↔ SLIDE REAL)
-     slide real: 0 1 2 3
-     dots:       3x 1x 1.2x 1.5
-  ====================================================== */
-  const dotToSlideMap = [3, 0, 1, 2];
-  const slideToDotMap = [1, 2, 3, 0];
+     ORDEM VISUAL DOS DOTS (HTML):
+     [0] 1x
+     [1] 1.2x
+     [2] 1.5
+     [3] 3x
 
-  let current = 1; // primeiro slide REAL
+     ORDEM DOS SLIDES REAIS:
+     [0] 24mm
+     [1] 28mm
+     [2] 35mm
+     [3] 72mm
+  ====================================================== */
+
+  const dotToSlideMap = [0, 1, 2, 3];
+  const slideToDotMap = [0, 1, 2, 3];
+
+  let current = 1; // primeiro slide real
+  let isAnimating = false;
   let autoplay = true;
   let timer = null;
-  let isAnimating = false;
 
   /* ================= CLONES ================= */
   const firstClone = slides[0].cloneNode(true);
@@ -62,27 +67,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   slides = Array.from(root.querySelectorAll(".slick-slide"));
 
-  /* ================= HELPERS ================= */
-  function clampTranslate(x) {
-    const max = track.scrollWidth - list.clientWidth;
-    return Math.max(0, Math.min(x, max));
-  }
-
+  /* ================= SLIDE POSITION ================= */
   function getX(slide) {
-    const center = slide.offsetLeft + slide.offsetWidth / 2;
-    return clampTranslate(center - list.clientWidth / 2);
+    return slide.offsetLeft - (list.clientWidth - slide.offsetWidth) / 2;
   }
 
+  /* ================= INDICATOR (FIXO E ESTÁVEL) ================= */
   function updateIndicator(dotIndex) {
-    const dot = dots[dotIndex];
-    if (!dot) return;
-    indicator.style.width = dot.offsetWidth + "px";
-    indicator.style.transform = `translateX(${dot.offsetLeft}px)`;
+    const step = 100 / dots.length;
+    indicator.style.transform = `translateX(${dotIndex * step}%)`;
   }
 
-  function syncUIByCurrent() {
+  function syncUI() {
     const realIndex = current - 1;
-    if (realIndex < 0 || realIndex >= focalItems.length) return;
 
     focalItems.forEach((item, i) =>
       item.classList.toggle("active", i === realIndex)
@@ -91,10 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
     dots.forEach(dot => dot.classList.remove("active"));
 
     const dotIndex = slideToDotMap[realIndex];
-    if (dotIndex != null) {
-      dots[dotIndex].classList.add("active");
-      updateIndicator(dotIndex);
-    }
+    dots[dotIndex].classList.add("active");
+    updateIndicator(dotIndex);
   }
 
   /* ================= CORE ================= */
@@ -119,21 +114,19 @@ document.addEventListener("DOMContentLoaded", () => {
     current = index;
 
     setTimeout(() => {
-      // clone final → primeiro real
       if (current === slides.length - 1) {
         current = 1;
         goTo(current, false);
         return;
       }
 
-      // clone inicial → último real
       if (current === 0) {
         current = slides.length - 2;
         goTo(current, false);
         return;
       }
 
-      syncUIByCurrent();
+      syncUI();
       isAnimating = false;
     }, 650);
   }
@@ -142,52 +135,31 @@ document.addEventListener("DOMContentLoaded", () => {
     goTo(current + 1);
   }
 
-  function prev() {
-    goTo(current - 1);
-  }
+  /* ================= DOTS ================= */
+  dots.forEach((dot, i) => {
+    dot.addEventListener("click", () => {
+      stopAutoplay();
+      goTo(dotToSlideMap[i] + 1);
+    });
+  });
 
   /* ================= AUTOPLAY ================= */
   function startAutoplay() {
     autoplay = true;
-    btnPlay.classList.add("playing");
     clearInterval(timer);
     timer = setInterval(next, 4000);
   }
 
   function stopAutoplay() {
     autoplay = false;
-    btnPlay.classList.remove("playing");
     clearInterval(timer);
   }
-
-  /* ================= EVENTS ================= */
-  btnNext.addEventListener("click", () => {
-    stopAutoplay();
-    next();
-  });
-
-  btnPrev.addEventListener("click", () => {
-    stopAutoplay();
-    prev();
-  });
-
-  btnPlay.addEventListener("click", () => {
-    autoplay ? stopAutoplay() : startAutoplay();
-  });
-
-  dots.forEach((dot, i) => {
-    dot.addEventListener("click", () => {
-      stopAutoplay();
-      const slideReal = dotToSlideMap[i];
-      goTo(slideReal + 1);
-    });
-  });
 
   window.addEventListener("resize", () => goTo(current, false));
 
   /* ================= INIT ================= */
   goTo(current, false);
-  syncUIByCurrent();
+  syncUI();
   startAutoplay();
 });
 
