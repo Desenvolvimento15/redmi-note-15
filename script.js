@@ -33,26 +33,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const focalItems = Array.from(root.querySelectorAll(".focal-item"));
   const indicator = root.querySelector(".focal-track-indicator");
 
-  /* ======================================================
-     ORDEM VISUAL DOS DOTS (HTML):
-     [0] 1x
-     [1] 1.2x
-     [2] 1.5
-     [3] 3x
-
-     ORDEM DOS SLIDES REAIS:
-     [0] 24mm
-     [1] 28mm
-     [2] 35mm
-     [3] 72mm
-  ====================================================== */
-
   const dotToSlideMap = [0, 1, 2, 3];
   const slideToDotMap = [0, 1, 2, 3];
 
-  let current = 1; // primeiro slide real
+  let current = 1;
   let isAnimating = false;
-  let autoplay = true;
   let timer = null;
 
   /* ================= CLONES ================= */
@@ -67,12 +52,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   slides = Array.from(root.querySelectorAll(".slick-slide"));
 
-  /* ================= SLIDE POSITION ================= */
+  /* ================= POSIÇÃO ================= */
   function getX(slide) {
     return slide.offsetLeft - (list.clientWidth - slide.offsetWidth) / 2;
   }
 
-  /* ================= INDICATOR (FIXO E ESTÁVEL) ================= */
+  /* ================= INDICATOR ================= */
   function updateIndicator(dotIndex) {
     const step = 100 / dots.length;
     indicator.style.transform = `translateX(${dotIndex * step}%)`;
@@ -82,11 +67,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const realIndex = current - 1;
 
     focalItems.forEach((item, i) =>
-      item.classList.toggle("active", i === realIndex)
+      item.classList.toggle("active", i === realIndex),
     );
 
-    dots.forEach(dot => dot.classList.remove("active"));
-
+    dots.forEach((dot) => dot.classList.remove("active"));
     const dotIndex = slideToDotMap[realIndex];
     dots[dotIndex].classList.add("active");
     updateIndicator(dotIndex);
@@ -103,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
     track.style.transition = animate ? "transform 0.6s ease" : "none";
     track.style.transform = `translate3d(-${getX(slide)}px,0,0)`;
 
-    slides.forEach(s => {
+    slides.forEach((s) => {
       s.classList.remove("slick-current", "slick-active", "slick-center");
       s.setAttribute("aria-hidden", "true");
     });
@@ -113,22 +97,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     current = index;
 
-    setTimeout(() => {
-      if (current === slides.length - 1) {
-        current = 1;
-        goTo(current, false);
-        return;
-      }
-
-      if (current === 0) {
-        current = slides.length - 2;
-        goTo(current, false);
-        return;
-      }
-
+    if (!animate) {
       syncUI();
       isAnimating = false;
-    }, 650);
+      return;
+    }
+
+    track.addEventListener(
+      "transitionend",
+      () => {
+        // loop invisível
+        if (current === slides.length - 1) {
+          current = 1;
+          goTo(current, false);
+        } else if (current === 0) {
+          current = slides.length - 2;
+          goTo(current, false);
+        } else {
+          syncUI();
+          isAnimating = false;
+        }
+      },
+      { once: true },
+    );
   }
 
   function next() {
@@ -138,21 +129,16 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ================= DOTS ================= */
   dots.forEach((dot, i) => {
     dot.addEventListener("click", () => {
-      stopAutoplay();
+      clearInterval(timer);
       goTo(dotToSlideMap[i] + 1);
+      startAutoplay();
     });
   });
 
   /* ================= AUTOPLAY ================= */
   function startAutoplay() {
-    autoplay = true;
     clearInterval(timer);
     timer = setInterval(next, 4000);
-  }
-
-  function stopAutoplay() {
-    autoplay = false;
-    clearInterval(timer);
   }
 
   window.addEventListener("resize", () => goTo(current, false));
