@@ -20,7 +20,6 @@ $(".slick-end-2").slick({
 });
 
 
-
 document.addEventListener("DOMContentLoaded", () => {
   const root = document.querySelector(".section.div262");
   if (!root) return;
@@ -30,13 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let slides = Array.from(root.querySelectorAll(".slick-slide"));
   const dots = Array.from(root.querySelectorAll(".focal-option"));
-  const focalItems = Array.from(root.querySelectorAll(".focal-item"));
   const indicator = root.querySelector(".focal-track-indicator");
 
-  const dotToSlideMap = [0, 1, 2, 3];
-  const slideToDotMap = [0, 1, 2, 3];
-
-  let current = 1;
+  let current = 1; // primeiro slide real
   let isAnimating = false;
   let timer = null;
 
@@ -52,28 +47,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   slides = Array.from(root.querySelectorAll(".slick-slide"));
 
-  /* ================= POSIÇÃO ================= */
-  function getX(slide) {
+  /* ================= POSITION ================= */
+  function getX(index) {
+    const slide = slides[index];
     return slide.offsetLeft - (list.clientWidth - slide.offsetWidth) / 2;
   }
 
-  /* ================= INDICATOR ================= */
-  function updateIndicator(dotIndex) {
+  /* ================= DOTS ================= */
+  function updateDots(realIndex) {
+    dots.forEach((d) => d.classList.remove("active"));
+    dots[realIndex]?.classList.add("active");
+
     const step = 100 / dots.length;
-    indicator.style.transform = `translateX(${dotIndex * step}%)`;
-  }
-
-  function syncUI() {
-    const realIndex = current - 1;
-
-    focalItems.forEach((item, i) =>
-      item.classList.toggle("active", i === realIndex),
-    );
-
-    dots.forEach((dot) => dot.classList.remove("active"));
-    const dotIndex = slideToDotMap[realIndex];
-    dots[dotIndex].classList.add("active");
-    updateIndicator(dotIndex);
+    indicator.style.transform = `translateX(${realIndex * step}%)`;
   }
 
   /* ================= CORE ================= */
@@ -81,56 +67,54 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isAnimating) return;
     isAnimating = true;
 
-    const slide = slides[index];
-    if (!slide) return;
-
     track.style.transition = animate ? "transform 0.6s ease" : "none";
-    track.style.transform = `translate3d(-${getX(slide)}px,0,0)`;
+    track.style.transform = `translate3d(-${getX(index)}px, 0, 0)`;
 
-    slides.forEach((s) => {
-      s.classList.remove("slick-current", "slick-active", "slick-center");
-      s.setAttribute("aria-hidden", "true");
+    // remove destaque de todos
+    slides.forEach((slide) => {
+      slide.classList.remove("slick-current");
     });
 
-    slide.classList.add("slick-current", "slick-active", "slick-center");
-    slide.setAttribute("aria-hidden", "false");
+    // destaca o slide atual
+    slides[index]?.classList.add("slick-current");
 
     current = index;
 
-    if (!animate) {
-      syncUI();
-      isAnimating = false;
-      return;
-    }
+    setTimeout(() => {
+      // clone final → volta para o primeiro real
+      if (current === slides.length - 1) {
+        track.style.transition = "none";
+        current = 1;
+        track.style.transform = `translate3d(-${getX(current)}px,0,0)`;
+      }
 
-    track.addEventListener(
-      "transitionend",
-      () => {
-        // loop invisível
-        if (current === slides.length - 1) {
-          current = 1;
-          goTo(current, false);
-        } else if (current === 0) {
-          current = slides.length - 2;
-          goTo(current, false);
-        } else {
-          syncUI();
-          isAnimating = false;
-        }
-      },
-      { once: true },
-    );
+      // clone inicial → volta para o último real
+      if (current === 0) {
+        track.style.transition = "none";
+        current = slides.length - 2;
+        track.style.transform = `translate3d(-${getX(current)}px,0,0)`;
+      }
+
+      // garante destaque correto após o jump
+      slides.forEach((slide) => {
+        slide.classList.remove("slick-current");
+      });
+      slides[current]?.classList.add("slick-current");
+
+      updateDots(current - 1);
+      isAnimating = false;
+    }, 650);
   }
 
   function next() {
     goTo(current + 1);
   }
 
-  /* ================= DOTS ================= */
+  /* ================= DOT CLICK ================= */
   dots.forEach((dot, i) => {
     dot.addEventListener("click", () => {
-      clearInterval(timer);
-      goTo(dotToSlideMap[i] + 1);
+      stopAutoplay();
+      goTo(i + 1);
       startAutoplay();
     });
   });
@@ -141,11 +125,14 @@ document.addEventListener("DOMContentLoaded", () => {
     timer = setInterval(next, 4000);
   }
 
+  function stopAutoplay() {
+    clearInterval(timer);
+  }
+
   window.addEventListener("resize", () => goTo(current, false));
 
   /* ================= INIT ================= */
   goTo(current, false);
-  syncUI();
+  updateDots(0);
   startAutoplay();
 });
-

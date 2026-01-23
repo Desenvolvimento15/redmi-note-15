@@ -1,6 +1,18 @@
 
 
 
+.slick-slide img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+
+
+
+
 video{
   width: 100%;
 }
